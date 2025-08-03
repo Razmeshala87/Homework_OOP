@@ -58,16 +58,14 @@ def test_category_counters():
 
 
 def test_empty_category():
-    """Тестирование создания пустой категории"""
-    # Сбрасываем счетчики перед тестом
-    Category.total_categories = 0
-    Category.total_unique_products = 0
-
+    """Проверяет создание категории без товаров."""
+    Category.total_categories = 0  # Сброс счетчика категорий
+    Category.total_unique_products = 0  # Сброс счетчика уникальных товаров
     empty_category = Category("Пустая категория", "Описание", [])
 
     assert len(empty_category.products) == 0
     assert Category.total_categories == 1
-    assert Category.total_unique_products == 0
+    assert Category.total_unique_products == 0  # Товаров нет
 
 
 def test_multiple_products_same_category():
