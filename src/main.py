@@ -1,18 +1,16 @@
 import json
-import os
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional, Union
 
 
 class Product:
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
         self.name = name
         self.description = description
-        self.__price = price  # Приватный атрибут цены
+        self.__price = price
         self.quantity = quantity
 
     @property
     def price(self) -> float:
-        """Геттер для цены."""
         return self.__price
 
     @price.setter
@@ -40,12 +38,15 @@ class Product:
         return f"Product(name='{self.name}', price={self.__price}, quantity={self.quantity})"
 
     @classmethod
-    def new_product(cls, product_data: Dict[str, str | float | int],
-                    products_list: Optional[List['Product']] = None) -> 'Product':
-        name = product_data['name']
-        description = product_data['description']
-        price = product_data['price']
-        quantity = product_data['quantity']
+    def new_product(
+            cls,
+            product_data: Dict[str, Union[str, float, int]],
+            products_list: Optional[List['Product']] = None
+    ) -> 'Product':
+        name = str(product_data['name'])
+        description = str(product_data['description'])
+        price = float(product_data['price'])
+        quantity = int(product_data['quantity'])
 
         if products_list:
             for existing_product in products_list:
@@ -61,7 +62,7 @@ class Category:
     total_categories: int = 0
     total_unique_products: int = 0
 
-    def __init__(self, name: str, description: str, products: List['Product']) -> None:
+    def __init__(self, name: str, description: str, products: List[Product]) -> None:
         self.name = name
         self.description = description
         self.__products = products
@@ -69,7 +70,7 @@ class Category:
         Category.total_categories += 1
         Category.total_unique_products += len(products)
 
-    def add_product(self, product: 'Product') -> None:
+    def add_product(self, product: Product) -> None:
         for existing_product in self.__products:
             if existing_product.name == product.name:
                 existing_product.quantity += product.quantity
@@ -81,12 +82,14 @@ class Category:
 
     @property
     def products(self) -> str:
-        products_info = []
-        for product in self.__products:
-            products_info.append(
-                f"{product.name}, {product.price} руб. Остаток: {product.quantity} шт."
-            )
-        return "\n".join(products_info)
+        return "\n".join(
+            f"{p.name}, {p.price} руб. Остаток: {p.quantity} шт."
+            for p in self.__products
+        )
+
+    @property
+    def _Category__products(self) -> List[Product]:
+        return self.__products
 
     def __repr__(self) -> str:
         return f"Category(name='{self.name}', products={len(self.__products)})"
@@ -109,14 +112,19 @@ def load_data_from_json(filename: str) -> List[Category]:
     for category_data in data:
         products = []
         for product_data in category_data['products']:
-            product = Product.new_product(product_data, all_products)
+            product = Product.new_product({
+                'name': str(product_data['name']),
+                'description': str(product_data['description']),
+                'price': float(product_data['price']),
+                'quantity': int(product_data['quantity'])
+            }, all_products)
             products.append(product)
             if product not in all_products:
                 all_products.append(product)
 
         category = Category(
-            name=category_data['name'],
-            description=category_data['description'],
+            name=str(category_data['name']),
+            description=str(category_data['description']),
             products=products
         )
         categories.append(category)
@@ -125,44 +133,11 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Демонстрация работы сеттера цены
+    # Демонстрация работы
     test_product = Product("Тестовый товар", "Описание", 1000, 10)
-
     print(f"Текущая цена: {test_product.price}")
-
-    # Пытаемся установить отрицательную цену
-    test_product.price = -500  # Должно вывести сообщение об ошибке
-
-    # Пытаемся понизить цену
-    test_product.price = 800  # Запросит подтверждение
-
-    # Пытаемся повысить цену
-    test_product.price = 1200  # Установится без подтверждения
-
-    print(f"Итоговая цена: {test_product.price}")
-
-    # Загрузка данных из JSON
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(current_dir, '..', 'data', 'products.json')
-    json_path = os.path.normpath(json_path)
-
-    print(f"\nПытаемся загрузить файл по пути: {json_path}")
-
-    categories = load_data_from_json(json_path)
-
-    if categories:
-        print("\nЗагруженные категории:")
-        for category in categories:
-            print(f"\n- {category.name} ({len(category._Category__products)} товаров)")
-            print(category.products)
-
-        print("\nОбщая статистика:")
-        print(f"Всего категорий: {Category.total_categories}")
-        print(f"Всего уникальных товаров: {Category.total_unique_products}")
-    else:
-        print("\nНе удалось загрузить данные. Проверьте:")
-        print(f"1. Существует ли файл: {json_path}")
-        print("2. Корректно ли его содержимое (валидный JSON)")
+    test_product.price = 1200
+    print(f"Новая цена: {test_product.price}")
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
