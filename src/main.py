@@ -71,6 +71,9 @@ class Category:
         Category.total_unique_products += len(products)
 
     def add_product(self, product: Product) -> None:
+        if not isinstance(product, Product):
+            raise TypeError("Можно добавлять только объекты класса Product или его наследников")
+
         for existing_product in self.__products:
             if existing_product.name == product.name:
                 existing_product.quantity += product.quantity
