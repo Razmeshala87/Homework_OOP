@@ -1,33 +1,101 @@
 import json
-import os
-from typing import List
+from typing import Dict, List, Optional, Union
 
 
 class Product:
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
         self.name = name
         self.description = description
-        self.price = price
+        self.__price = price
         self.quantity = quantity
 
+    @property
+    def price(self) -> float:
+        return self.__price
+
+    @price.setter
+    def price(self, new_price: float) -> None:
+        """
+        Сеттер для цены с проверками:
+        1. Цена не должна быть <= 0
+        2. При понижении цены требует подтверждения
+        """
+        if new_price <= 0:
+            print("Цена не должна быть нулевая или отрицательная")
+            return
+
+        if new_price < self.__price:
+            answer = input(
+                f"Вы действительно хотите понизить цену с {self.__price} до {new_price}? (y/n): "
+            )
+            if answer.lower() != 'y':
+                print("Изменение цены отменено")
+                return
+
+        self.__price = new_price
+
     def __repr__(self) -> str:
-        return f"Product(name='{self.name}', price={self.price}, quantity={self.quantity})"
+        return f"Product(name='{self.name}', price={self.__price}, quantity={self.quantity})"
+
+    @classmethod
+    def new_product(
+            cls,
+            product_data: Dict[str, Union[str, float, int]],
+            products_list: Optional[List['Product']] = None
+    ) -> 'Product':
+        name = str(product_data['name'])
+        description = str(product_data['description'])
+        price = float(product_data['price'])
+        quantity = int(product_data['quantity'])
+
+        if products_list:
+            for existing_product in products_list:
+                if existing_product.name == name:
+                    existing_product.quantity += quantity
+                    existing_product.price = max(existing_product.price, price)
+                    return existing_product
+
+        return cls(name, description, price, quantity)
 
 
 class Category:
     total_categories: int = 0
     total_unique_products: int = 0
 
-    def __init__(self, name: str, description: str, products: List['Product']) -> None:
+    def __init__(self, name: str, description: str, products: List[Product]) -> None:
         self.name = name
         self.description = description
-        self.products = products
+        self.__products = products
 
         Category.total_categories += 1
         Category.total_unique_products += len(products)
 
+    def add_product(self, product: Product) -> None:
+        if not isinstance(product, Product):
+            raise TypeError("Можно добавлять только объекты класса Product или его наследников")
+
+        for existing_product in self.__products:
+            if existing_product.name == product.name:
+                existing_product.quantity += product.quantity
+                existing_product.price = max(existing_product.price, product.price)
+                return
+
+        self.__products.append(product)
+        Category.total_unique_products += 1
+
+    @property
+    def products(self) -> str:
+        return "\n".join(
+            f"{p.name}, {p.price} руб. Остаток: {p.quantity} шт."
+            for p in self.__products
+        )
+
+    @property
+    def _Category__products(self) -> List[Product]:
+        return self.__products
+
     def __repr__(self) -> str:
-        return f"Category(name='{self.name}', products={len(self.products)})"
+        return f"Category(name='{self.name}', products={len(self.__products)})"
 
 
 def load_data_from_json(filename: str) -> List[Category]:
@@ -42,19 +110,24 @@ def load_data_from_json(filename: str) -> List[Category]:
         return []
 
     categories: List[Category] = []
+    all_products: List[Product] = []
+
     for category_data in data:
-        products = [
-            Product(
-                name=product_data['name'],
-                description=product_data['description'],
-                price=product_data['price'],
-                quantity=product_data['quantity']
-            )
-            for product_data in category_data['products']
-        ]
+        products = []
+        for product_data in category_data['products']:
+            product = Product.new_product({
+                'name': str(product_data['name']),
+                'description': str(product_data['description']),
+                'price': float(product_data['price']),
+                'quantity': int(product_data['quantity'])
+            }, all_products)
+            products.append(product)
+            if product not in all_products:
+                all_products.append(product)
+
         category = Category(
-            name=category_data['name'],
-            description=category_data['description'],
+            name=str(category_data['name']),
+            description=str(category_data['description']),
             products=products
         )
         categories.append(category)
@@ -63,31 +136,11 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Получаем путь к директории src
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Поднимаемся на уровень выше (в Homework_OOP) и идем в папку data
-    json_path = os.path.join(current_dir, '..', 'data', 'products.json')
-    # Нормализуем путь (убираем ../)
-    json_path = os.path.normpath(json_path)
-
-    print(f"Пытаемся загрузить файл по пути: {json_path}")  # Для отладки
-
-    categories = load_data_from_json(json_path)
-
-    if categories:
-        print("\nЗагруженные категории:")
-        for category in categories:
-            print(f"\n- {category.name} ({len(category.products)} товаров)")
-            for product in category.products:
-                print(f"  • {product.name} - {product.price} руб. (осталось: {product.quantity})")
-
-        print("\nОбщая статистика:")
-        print(f"Всего категорий: {Category.total_categories}")
-        print(f"Всего уникальных товаров: {Category.total_unique_products}")
-    else:
-        print("\nНе удалось загрузить данные. Проверьте:")
-        print(f"1. Существует ли файл: {json_path}")
-        print("2. Корректно ли его содержимое (валидный JSON)")
+    # Демонстрация работы
+    test_product = Product("Тестовый товар", "Описание", 1000, 10)
+    print(f"Текущая цена: {test_product.price}")
+    test_product.price = 1200
+    print(f"Новая цена: {test_product.price}")
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
