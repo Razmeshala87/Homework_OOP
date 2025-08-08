@@ -40,6 +40,15 @@ class Product:
     def __str__(self) -> str:
         return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
 
+    def __add__(self, other: 'Product') -> float:
+        """
+        Магический метод для сложения продуктов.
+        Возвращает общую стоимость продуктов на складе.
+        """
+        if not isinstance(other, Product):
+            raise TypeError("Можно складывать только объекты класса Product")
+        return self.price * self.quantity + other.price * other.quantity
+
     @classmethod
     def new_product(
             cls,
@@ -68,7 +77,7 @@ class Category:
     def __init__(self, name: str, description: str, products: List[Product]) -> None:
         self.name = name
         self.description = description
-        self.__products = products  # Приватный атрибут
+        self.__products = products
 
         Category.total_categories += 1
         Category.total_unique_products += len(products)
@@ -160,6 +169,13 @@ if __name__ == "__main__":
 
     print("\nСписок продуктов в категории:")
     print(category.products)
+
+    # Демонстрация сложения продуктов
+    print("\nДемонстрация сложения продуктов:")
+    product_a = Product("Товар A", "Описание A", 100, 10)
+    product_b = Product("Товар B", "Описание B", 200, 2)
+    total_cost = product_a + product_b
+    print(f"Общая стоимость товаров A и B: {total_cost} руб.")
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
