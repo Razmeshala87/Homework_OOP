@@ -15,19 +15,12 @@ class Product:
 
     @price.setter
     def price(self, new_price: float) -> None:
-        """
-        Сеттер для цены с проверками:
-        1. Цена не должна быть <= 0
-        2. При понижении цены требует подтверждения
-        """
         if new_price <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
 
         if new_price < self.__price:
-            answer = input(
-                f"Вы действительно хотите понизить цену с {self.__price} до {new_price}? (y/n): "
-            )
+            answer = input(f"Вы действительно хотите понизить цену с {self.__price} до {new_price}? (y/n): ")
             if answer.lower() != 'y':
                 print("Изменение цены отменено")
                 return
@@ -41,20 +34,13 @@ class Product:
         return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: 'Product') -> float:
-        """
-        Магический метод для сложения продуктов.
-        Возвращает общую стоимость продуктов на складе.
-        """
         if not isinstance(other, Product):
             raise TypeError("Можно складывать только объекты класса Product")
         return self.price * self.quantity + other.price * other.quantity
 
     @classmethod
-    def new_product(
-            cls,
-            product_data: Dict[str, Union[str, float, int]],
-            products_list: Optional[List['Product']] = None
-    ) -> 'Product':
+    def new_product(cls, product_data: Dict[str, Union[str, float, int]],
+                    products_list: Optional[List['Product']] = None) -> 'Product':
         name = str(product_data['name'])
         description = str(product_data['description'])
         price = float(product_data['price'])
@@ -68,6 +54,24 @@ class Product:
                     return existing_product
 
         return cls(name, description, price, quantity)
+
+
+class CategoryIterator:
+    """Итератор для перебора товаров категории."""
+
+    def __init__(self, category: 'Category') -> None:
+        self._category = category
+        self._index = 0
+
+    def __iter__(self) -> 'CategoryIterator':
+        return self
+
+    def __next__(self) -> Product:
+        if self._index < len(self._category.products_list):
+            product = self._category.products_list[self._index]
+            self._index += 1
+            return product
+        raise StopIteration
 
 
 class Category:
@@ -102,6 +106,9 @@ class Category:
     @property
     def products_list(self) -> List[Product]:
         return self.__products
+
+    def __iter__(self) -> CategoryIterator:
+        return CategoryIterator(self)
 
     def __repr__(self) -> str:
         return f"Category(name='{self.name}', products={len(self.__products)})"
@@ -149,33 +156,22 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Демонстрация работы
-    test_product = Product("Тестовый товар", "Описание", 1000, 10)
-    print(f"Текущая цена: {test_product.price}")
-    test_product.price = 1200
-    print(f"Новая цена: {test_product.price}")
+    # Создаем тестовые продукты
+    product1 = Product("Товар 1", "Описание 1", 100, 10)
+    product2 = Product("Товар 2", "Описание 2", 200, 5)
+    product3 = Product("Товар 3", "Описание 3", 300, 3)
 
-    # Демонстрация строкового представления
-    print("\nДемонстрация строкового представления:")
-    product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
-    product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
-    category = Category("Смартфоны", "Описание категории", [product1, product2])
+    # Создаем категорию и добавляем продукты
+    category = Category("Тестовая категория", "Описание категории", [product1, product2, product3])
 
-    print("\nСтроковое представление продукта:")
-    print(product1)
+    # Демонстрация итерации по товарам категории
+    print("Товары в категории:")
+    for product in category:
+        print(product)
 
-    print("\nСтроковое представление категории:")
-    print(category)
-
-    print("\nСписок продуктов в категории:")
-    print(category.products)
-
-    # Демонстрация сложения продуктов
-    print("\nДемонстрация сложения продуктов:")
-    product_a = Product("Товар A", "Описание A", 100, 10)
-    product_b = Product("Товар B", "Описание B", 200, 2)
-    total_cost = product_a + product_b
-    print(f"Общая стоимость товаров A и B: {total_cost} руб.")
+    # Альтернативный вариант с использованием list()
+    print("\nСписок товаров (через list()):")
+    print(list(category))
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
