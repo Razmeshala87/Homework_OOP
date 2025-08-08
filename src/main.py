@@ -37,6 +37,9 @@ class Product:
     def __repr__(self) -> str:
         return f"Product(name='{self.name}', price={self.__price}, quantity={self.quantity})"
 
+    def __str__(self) -> str:
+        return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
+
     @classmethod
     def new_product(
             cls,
@@ -65,7 +68,7 @@ class Category:
     def __init__(self, name: str, description: str, products: List[Product]) -> None:
         self.name = name
         self.description = description
-        self.__products = products
+        self.__products = products  # Приватный атрибут
 
         Category.total_categories += 1
         Category.total_unique_products += len(products)
@@ -85,17 +88,18 @@ class Category:
 
     @property
     def products(self) -> str:
-        return "\n".join(
-            f"{p.name}, {p.price} руб. Остаток: {p.quantity} шт."
-            for p in self.__products
-        )
+        return "\n".join(str(p) for p in self.__products)
 
     @property
-    def _Category__products(self) -> List[Product]:
+    def products_list(self) -> List[Product]:
         return self.__products
 
     def __repr__(self) -> str:
         return f"Category(name='{self.name}', products={len(self.__products)})"
+
+    def __str__(self) -> str:
+        total_quantity = sum(p.quantity for p in self.__products)
+        return f"{self.name}, количество продуктов: {total_quantity} шт."
 
 
 def load_data_from_json(filename: str) -> List[Category]:
@@ -141,6 +145,21 @@ if __name__ == "__main__":
     print(f"Текущая цена: {test_product.price}")
     test_product.price = 1200
     print(f"Новая цена: {test_product.price}")
+
+    # Демонстрация строкового представления
+    print("\nДемонстрация строкового представления:")
+    product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
+    product2 = Product("Iphone 15", "512GB, Gray space", 210000.0, 8)
+    category = Category("Смартфоны", "Описание категории", [product1, product2])
+
+    print("\nСтроковое представление продукта:")
+    print(product1)
+
+    print("\nСтроковое представление категории:")
+    print(category)
+
+    print("\nСписок продуктов в категории:")
+    print(category.products)
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
