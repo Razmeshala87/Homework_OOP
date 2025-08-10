@@ -47,8 +47,8 @@ def test_price_setter_positive(sample_product: Product) -> None:
 
 
 def test_price_setter_negative_value(
-    sample_product: Product,
-    monkeypatch: pytest.MonkeyPatch
+        sample_product: Product,
+        monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Тестирование попытки установки отрицательной цены."""
     monkeypatch.setattr('sys.stdin', StringIO('n\n'))
@@ -58,8 +58,8 @@ def test_price_setter_negative_value(
 
 
 def test_price_setter_lower_price_with_confirmation(
-    sample_product: Product,
-    monkeypatch: pytest.MonkeyPatch
+        sample_product: Product,
+        monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Тестирование понижения цены с подтверждением."""
     monkeypatch.setattr('sys.stdin', StringIO('y\n'))
@@ -68,8 +68,8 @@ def test_price_setter_lower_price_with_confirmation(
 
 
 def test_price_setter_lower_price_without_confirmation(
-    sample_product: Product,
-    monkeypatch: pytest.MonkeyPatch
+        sample_product: Product,
+        monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Тестирование понижения цены без подтверждения."""
     monkeypatch.setattr('sys.stdin', StringIO('n\n'))
@@ -118,6 +118,48 @@ def test_load_data_from_json_invalid_json(tmp_path: Path) -> None:
     assert len(categories) == 0
 
 
+def test_category_iterator(sample_category: Category, sample_product: Product) -> None:
+    """Тестирование итератора по товарам категории."""
+    sample_category.add_product(sample_product)
+    iterator = iter(sample_category)
+
+    # Проверяем первый и единственный элемент
+    assert next(iterator) == sample_product
+
+    # Проверяем остановку итерации
+    with pytest.raises(StopIteration):
+        next(iterator)
+
+
+def test_category_iteration(sample_category: Category) -> None:
+    """Тестирование итерации по категории с помощью цикла for."""
+    products = [
+        Product("Товар 1", "Описание 1", 100.0, 5),
+        Product("Товар 2", "Описание 2", 200.0, 3)
+    ]
+
+    for product in products:
+        sample_category.add_product(product)
+
+    # Проверяем, что все товары доступны при итерации
+    for i, product in enumerate(sample_category):
+        assert product == products[i]
+
+
+def test_category_list_conversion(sample_category: Category) -> None:
+    """Тестирование преобразования категории в список товаров."""
+    products = [
+        Product("Товар 1", "Описание 1", 100.0, 5),
+        Product("Товар 2", "Описание 2", 200.0, 3)
+    ]
+
+    for product in products:
+        sample_category.add_product(product)
+
+    # Проверяем преобразование в список
+    assert list(sample_category) == products
+
+
 @pytest.mark.skip(reason="Требует изменения main.py")
 def test_add_product_new(sample_category: Category) -> None:
     """Тестирование добавления нового продукта в категорию."""
@@ -126,8 +168,8 @@ def test_add_product_new(sample_category: Category) -> None:
 
 @pytest.mark.skip(reason="Требует изменения main.py")
 def test_add_product_existing(
-    sample_category: Category,
-    sample_product: Product
+        sample_category: Category,
+        sample_product: Product
 ) -> None:
     """Тестирование добавления существующего продукта в категорию."""
     pass
