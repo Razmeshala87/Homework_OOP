@@ -3,6 +3,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 
+class ZeroQuantityError(Exception):
+    """Исключение для случаев добавления товара с нулевым количеством."""
+
+    def __init__(self, message: str = "Товар с нулевым количеством не может быть добавлен") -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
 class ReprMixin:
     """Миксин для вывода информации о создании объекта."""
 
@@ -36,7 +44,7 @@ class BaseProduct(ABC):
     @abstractmethod
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
         if quantity <= 0:
-            raise ValueError("Товар с нулевым количеством не может быть добавлен")
+            raise ZeroQuantityError()
         self.name = name
         self.description = description
         self.__price = price
@@ -186,18 +194,26 @@ class Order(ReprMixin, BaseEntity):
     """Класс для представления заказа."""
 
     def __init__(self, product: Product, quantity: int) -> None:
-        if not isinstance(product, Product):
-            raise TypeError("Можно заказать только объекты классов Product или его наследников")
-        if quantity <= 0:
-            raise ValueError("Количество товара должно быть положительным числом")
-        if quantity > product.quantity:
-            raise ValueError("Недостаточно товара на складе")
+        try:
+            if not isinstance(product, Product):
+                raise TypeError("Можно заказать только объекты классов Product или его наследников")
+            if quantity <= 0:
+                raise ZeroQuantityError("Количество товара должно быть положительным числом")
+            if quantity > product.quantity:
+                raise ValueError("Недостаточно товара на складе")
 
-        super().__init__(name=f"Заказ {product.name}", description=f"Заказ товара {product.name}")
-        self.product = product
-        self.quantity = quantity
-        self.total_price = product.price * quantity
-        product.quantity -= quantity  # Уменьшаем количество товара на складе
+            super().__init__(name=f"Заказ {product.name}", description=f"Заказ товара {product.name}")
+            self.product = product
+            self.quantity = quantity
+            self.total_price = product.price * quantity
+            product.quantity -= quantity  # Уменьшаем количество товара на складе
+
+            print(f"Товар '{product.name}' успешно добавлен в заказ")
+        except (TypeError, ZeroQuantityError, ValueError) as e:
+            print(f"Ошибка при создании заказа: {e}")
+            raise  # Пробрасываем исключение дальше
+        finally:
+            print("Обработка добавления товара в заказ завершена")
 
     def __repr__(self) -> str:
         return f"Order(product={self.product!r}, quantity={self.quantity}, total_price={self.total_price})"
@@ -217,7 +233,13 @@ class Category(ReprMixin, BaseEntity):
         self.__products: List[Product] = []
 
         for product in products:
-            self.add_product(product)
+            try:
+                self.add_product(product)
+                print(f"Товар '{product.name}' успешно добавлен в категорию '{self.name}'")
+            except (TypeError, ZeroQuantityError) as e:
+                print(f"Ошибка при добавлении товара: {e}")
+            finally:
+                print(f"Обработка добавления товара '{product.name}' завершена\n")
 
         Category.total_categories += 1
 
@@ -226,7 +248,7 @@ class Category(ReprMixin, BaseEntity):
             raise TypeError("Можно добавлять только объекты классов Product или его наследников")
 
         if product.quantity <= 0:
-            raise ValueError("Товар с нулевым количеством не может быть добавлен")
+            raise ZeroQuantityError()
 
         for existing_product in self.__products:
             if existing_product.name == product.name:
@@ -348,7 +370,7 @@ if __name__ == "__main__":
     # Тестирование создания товара с нулевым количеством
     try:
         bad_product = Product("Неверный товар", "Описание", 100.0, 0)
-    except ValueError as e:
+    except ZeroQuantityError as e:
         print(f"\nОжидаемая ошибка при создании товара: {e}")
 
     # Создаем тестовые продукты
@@ -365,13 +387,20 @@ if __name__ == "__main__":
         print("\nУспешный заказ:")
         print(order1)
         print(f"Остаток товара: {product1.quantity}")
-    except (TypeError, ValueError) as e:
+    except (TypeError, ZeroQuantityError, ValueError) as e:
         print(f"Ошибка при создании заказа: {e}")
 
     try:
         order2 = Order(smartphone, 5)  # Пытаемся заказать больше, чем есть
-    except ValueError as e:
+    except (ValueError, ZeroQuantityError) as e:
         print(f"\nОжидаемая ошибка: {e}")
+
+    # Попытка добавить товар с нулевым количеством в категорию
+    try:
+        zero_product = Product("Нулевой товар", "Описание", 50.0, 0)
+        category.add_product(zero_product)
+    except ZeroQuantityError as e:
+        print(f"\nОжидаемая ошибка при добавлении товара: {e}")
 
     # Выводим информацию о категории
     print("\nСодержимое категории:")
