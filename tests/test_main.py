@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import pytest
 
-from src.main import Category, Product, load_data_from_json
+from src.main import Category, LawnGrass, Product, Smartphone, load_data_from_json
 
 
 @pytest.fixture
@@ -15,10 +15,38 @@ def sample_product() -> Product:
 
 
 @pytest.fixture
+def sample_smartphone() -> Smartphone:
+    """Фикстура для создания тестового смартфона."""
+    return Smartphone(
+        "Тестовый смартфон",
+        "Описание",
+        50000.0,
+        3,
+        "Высокая",
+        "Модель X",
+        "128GB",
+        "Черный"
+    )
+
+
+@pytest.fixture
+def sample_lawn_grass() -> LawnGrass:
+    """Фикстура для создания тестовой газонной травы."""
+    return LawnGrass(
+        "Тестовая трава",
+        "Описание",
+        1000.0,
+        20,
+        "Россия",
+        "14 дней",
+        "Зеленый"
+    )
+
+
+@pytest.fixture
 def sample_category() -> Category:
     """Фикстура для создания тестовой категории."""
-    category = Category("Тестовая категория", "Описание категории", [])
-    return category
+    return Category("Тестовая категория", "Описание категории", [])
 
 
 @pytest.fixture
@@ -160,22 +188,60 @@ def test_category_list_conversion(sample_category: Category) -> None:
     assert list(sample_category) == products
 
 
-@pytest.mark.skip(reason="Требует изменения main.py")
-def test_add_product_new(sample_category: Category) -> None:
-    """Тестирование добавления нового продукта в категорию."""
-    pass
+def test_add_product_valid(sample_category: Category, sample_product: Product) -> None:
+    """Тестирование добавления валидного продукта."""
+    initial_count = Category.total_unique_products
+    sample_category.add_product(sample_product)
+    assert len(sample_category.products_list) == 1
+    assert Category.total_unique_products == initial_count + 1
 
 
-@pytest.mark.skip(reason="Требует изменения main.py")
-def test_add_product_existing(
-        sample_category: Category,
-        sample_product: Product
-) -> None:
-    """Тестирование добавления существующего продукта в категорию."""
-    pass
+def test_add_product_invalid_type(sample_category: Category) -> None:
+    """Тестирование попытки добавления невалидного типа."""
+    with pytest.raises(TypeError):
+        sample_category.add_product("это строка, а не продукт")  # type: ignore[arg-type]
 
 
-@pytest.mark.skip(reason="Требует изменения main.py")
+def test_add_product_negative_quantity(sample_category: Category) -> None:
+    """Тестирование попытки добавления продукта с отрицательным количеством."""
+    with pytest.raises(ValueError):
+        sample_category.add_product(Product("Товар", "Описание", 100.0, -5))
+
+
+def test_add_product_existing(sample_category: Category, sample_product: Product) -> None:
+    """Тестирование добавления существующего продукта."""
+    initial_count = Category.total_unique_products
+    sample_category.add_product(sample_product)
+    sample_category.add_product(sample_product)
+    assert len(sample_category.products_list) == 1
+    assert Category.total_unique_products == initial_count + 1
+
+
+def test_smartphone_creation(sample_smartphone: Smartphone) -> None:
+    """Тестирование создания объекта Smartphone."""
+    assert sample_smartphone.name == "Тестовый смартфон"
+    assert sample_smartphone.model == "Модель X"
+    assert sample_smartphone.memory == "128GB"
+
+
+def test_lawn_grass_creation(sample_lawn_grass: LawnGrass) -> None:
+    """Тестирование создания объекта LawnGrass."""
+    assert sample_lawn_grass.name == "Тестовая трава"
+    assert sample_lawn_grass.country == "Россия"
+    assert sample_lawn_grass.germination_period == "14 дней"
+
+
+def test_category_count(sample_category: Category) -> None:
+    """Тестирование подсчета количества категорий."""
+    initial_count = Category.total_categories
+    _ = Category("Новая категория", "Описание", [])
+    assert Category.total_categories == initial_count + 1
+
+
 def test_load_data_from_json_success(sample_json_file: Path) -> None:
     """Тестирование успешной загрузки данных из JSON."""
-    pass
+    categories = load_data_from_json(str(sample_json_file))
+    assert len(categories) == 1
+    assert categories[0].name == "Категория 1"
+    assert len(categories[0].products_list) == 1
+    assert categories[0].products_list[0].name == "Товар 1"

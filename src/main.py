@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 
 class Product:
@@ -28,14 +28,18 @@ class Product:
         self.__price = new_price
 
     def __repr__(self) -> str:
-        return f"Product(name='{self.name}', price={self.__price}, quantity={self.quantity})"
+        return f"Product(name='{self.name}', price={self.price}, quantity={self.quantity})"
 
     def __str__(self) -> str:
-        return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
+        return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: 'Product') -> float:
         if not isinstance(other, Product):
-            raise TypeError("Можно складывать только объекты класса Product")
+            raise TypeError("Можно складывать только объекты класса Product или его наследников")
+
+        if type(self) is not type(other):
+            raise TypeError("Нельзя складывать товары разных классов")
+
         return self.price * self.quantity + other.price * other.quantity
 
     @classmethod
@@ -56,9 +60,61 @@ class Product:
         return cls(name, description, price, quantity)
 
 
-class CategoryIterator:
-    """Итератор для перебора товаров категории."""
+class Smartphone(Product):
+    def __init__(
+            self,
+            name: str,
+            description: str,
+            price: float,
+            quantity: int,
+            efficiency: str,
+            model: str,
+            memory: str,
+            color: str
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
 
+    def __repr__(self) -> str:
+        return (f"Smartphone(name='{self.name}', price={self.price}, quantity={self.quantity}, "
+                f"efficiency='{self.efficiency}', model='{self.model}', "
+                f"memory='{self.memory}', color='{self.color}')")
+
+    def __str__(self) -> str:
+        return (f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт. "
+                f"(Модель: {self.model}, Память: {self.memory})")
+
+
+class LawnGrass(Product):
+    def __init__(
+            self,
+            name: str,
+            description: str,
+            price: float,
+            quantity: int,
+            country: str,
+            germination_period: str,
+            color: str
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
+
+    def __repr__(self) -> str:
+        return (f"LawnGrass(name='{self.name}', price={self.price}, quantity={self.quantity}, "
+                f"country='{self.country}', germination_period='{self.germination_period}', "
+                f"color='{self.color}')")
+
+    def __str__(self) -> str:
+        return (f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт. "
+                f"(Страна: {self.country}, Срок прорастания: {self.germination_period})")
+
+
+class CategoryIterator:
     def __init__(self, category: 'Category') -> None:
         self._category = category
         self._index = 0
@@ -78,24 +134,33 @@ class Category:
     total_categories: int = 0
     total_unique_products: int = 0
 
-    def __init__(self, name: str, description: str, products: List[Product]) -> None:
+    def __init__(self, name: str, description: str, products: Sequence[Product]) -> None:
         self.name = name
         self.description = description
-        self.__products = products
+        self.__products: List[Product] = []
+
+        # Добавляем продукты через метод add_product для валидации
+        for product in products:
+            self.add_product(product)
 
         Category.total_categories += 1
-        Category.total_unique_products += len(products)
 
     def add_product(self, product: Product) -> None:
+        """Добавляет продукт в категорию с проверкой типа и количества."""
         if not isinstance(product, Product):
-            raise TypeError("Можно добавлять только объекты класса Product или его наследников")
+            raise TypeError("Можно добавлять только объекты классов Product или его наследников")
 
+        if product.quantity <= 0:
+            raise ValueError("Количество товара должно быть положительным числом")
+
+        # Объединяем с существующим продуктом, если есть
         for existing_product in self.__products:
             if existing_product.name == product.name:
                 existing_product.quantity += product.quantity
                 existing_product.price = max(existing_product.price, product.price)
                 return
 
+        # Добавляем новый продукт
         self.__products.append(product)
         Category.total_unique_products += 1
 
@@ -133,14 +198,36 @@ def load_data_from_json(filename: str) -> List[Category]:
     all_products: List[Product] = []
 
     for category_data in data:
-        products = []
+        products: List[Product] = []
         for product_data in category_data['products']:
-            product = Product.new_product({
-                'name': str(product_data['name']),
-                'description': str(product_data['description']),
-                'price': float(product_data['price']),
-                'quantity': int(product_data['quantity'])
-            }, all_products)
+            product: Product
+            if 'efficiency' in product_data:
+                product = Smartphone(
+                    name=str(product_data['name']),
+                    description=str(product_data['description']),
+                    price=float(product_data['price']),
+                    quantity=int(product_data['quantity']),
+                    efficiency=str(product_data['efficiency']),
+                    model=str(product_data['model']),
+                    memory=str(product_data['memory']),
+                    color=str(product_data['color']))
+            elif 'country' in product_data:
+                product = LawnGrass(
+                    name=str(product_data['name']),
+                    description=str(product_data['description']),
+                    price=float(product_data['price']),
+                    quantity=int(product_data['quantity']),
+                    country=str(product_data['country']),
+                    germination_period=str(product_data['germination_period']),
+                    color=str(product_data['color']))
+            else:
+                product = Product.new_product({
+                    'name': str(product_data['name']),
+                    'description': str(product_data['description']),
+                    'price': float(product_data['price']),
+                    'quantity': int(product_data['quantity'])
+                }, all_products)
+
             products.append(product)
             if product not in all_products:
                 all_products.append(product)
@@ -156,22 +243,46 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
+    print("=== Тестирование защиты добавления продуктов в категорию ===")
+
     # Создаем тестовые продукты
-    product1 = Product("Товар 1", "Описание 1", 100, 10)
-    product2 = Product("Товар 2", "Описание 2", 200, 5)
-    product3 = Product("Товар 3", "Описание 3", 300, 3)
+    valid_product = Product("Валидный товар", "Описание", 100, 10)
+    valid_smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
+    valid_grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
 
-    # Создаем категорию и добавляем продукты
-    category = Category("Тестовая категория", "Описание категории", [product1, product2, product3])
+    # Создаем категорию
+    category = Category("Тестовая категория", "Описание", [valid_product, valid_smartphone])
 
-    # Демонстрация итерации по товарам категории
-    print("Товары в категории:")
+    # Успешное добавление
+    try:
+        category.add_product(valid_grass)
+        print("Успешно добавлен:", valid_grass)
+    except (TypeError, ValueError) as e:
+        print("Ошибка:", e)
+
+    # Попытка добавить неподходящий объект
+    try:
+        category.add_product("Это строка, а не продукт")  # type: ignore
+    except (TypeError, ValueError) as e:
+        print("Ожидаемая ошибка при добавлении строки:", e)
+
+    # Попытка добавить продукт с отрицательным количеством
+    try:
+        invalid_product = Product("Невалидный товар", "Описание", 100, -5)
+        category.add_product(invalid_product)
+    except (TypeError, ValueError) as e:
+        print("Ожидаемая ошибка при отрицательном количестве:", e)
+
+    # Вывод содержимого категории
+    print("\nСодержимое категории:")
     for product in category:
         print(product)
 
-    # Альтернативный вариант с использованием list()
-    print("\nСписок товаров (через list()):")
-    print(list(category))
+    # Статистика
+    print("\n=== Статистика ===")
+    print(f"Всего категорий: {Category.total_categories}")
+    print(f"Всего уникальных товаров: {Category.total_unique_products}")
+
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
