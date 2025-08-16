@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import pytest
 
-from src.main import Category, LawnGrass, Order, Product, Smartphone, load_data_from_json, ZeroQuantityError
+from src.main import Category, LawnGrass, Order, Product, Smartphone, ZeroQuantityError, load_data_from_json
 
 
 @pytest.fixture
