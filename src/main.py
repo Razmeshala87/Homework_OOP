@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
 import json
-from typing import Dict, List, Optional, Sequence, Union
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 
 class ReprMixin:
     """Миксин для вывода информации о создании объекта."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         class_name = self.__class__.__name__
         params = ', '.join([f"{k}={v!r}" for k, v in self.__dict__.items()])
@@ -17,7 +17,7 @@ class BaseEntity(ABC):
     """Абстрактный базовый класс для сущностей с общей функциональностью."""
 
     @abstractmethod
-    def __init__(self, name: str, description: str):
+    def __init__(self, name: str, description: str) -> None:
         self.name = name
         self.description = description
 
@@ -31,6 +31,8 @@ class BaseEntity(ABC):
 
 
 class BaseProduct(ABC):
+    __price: float  # Явное объявление атрибута для mypy
+
     @abstractmethod
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
         self.name = name
@@ -41,7 +43,7 @@ class BaseProduct(ABC):
     @property
     @abstractmethod
     def price(self) -> float:
-        return self.__price
+        pass
 
     @price.setter
     @abstractmethod
@@ -63,7 +65,7 @@ class BaseProduct(ABC):
     @classmethod
     @abstractmethod
     def new_product(cls, product_data: Dict[str, Union[str, float, int]],
-                    products_list: Optional[List['BaseProduct']] = None) -> 'BaseProduct':
+                    products_list: Optional[Sequence['BaseProduct']] = None) -> 'BaseProduct':
         pass
 
 
@@ -73,22 +75,23 @@ class Product(ReprMixin, BaseProduct):
 
     @property
     def price(self) -> float:
-        return self._BaseProduct__price
+        return cast(float, getattr(self, '_BaseProduct__price'))
 
     @price.setter
     def price(self, new_price: float) -> None:
+        current_price = cast(float, getattr(self, '_BaseProduct__price'))
         if new_price <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
 
-        if new_price < self._BaseProduct__price:
+        if new_price < current_price:
             answer = input(
-                f"Вы действительно хотите понизить цену с {self._BaseProduct__price} до {new_price}? (y/n): ")
+                f"Вы действительно хотите понизить цену с {current_price} до {new_price}? (y/n): ")
             if answer.lower() != 'y':
                 print("Изменение цены отменено")
                 return
 
-        self._BaseProduct__price = new_price
+        setattr(self, '_BaseProduct__price', new_price)
 
     def __repr__(self) -> str:
         return f"Product(name='{self.name}', price={self.price}, quantity={self.quantity})"
@@ -96,8 +99,8 @@ class Product(ReprMixin, BaseProduct):
     def __str__(self) -> str:
         return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
-    def __add__(self, other: 'Product') -> float:
-        if not isinstance(other, Product):
+    def __add__(self, other: BaseProduct) -> float:
+        if not isinstance(other, BaseProduct):
             raise TypeError("Можно складывать только объекты класса Product или его наследников")
 
         if type(self) is not type(other):
@@ -107,7 +110,7 @@ class Product(ReprMixin, BaseProduct):
 
     @classmethod
     def new_product(cls, product_data: Dict[str, Union[str, float, int]],
-                    products_list: Optional[List['Product']] = None) -> 'Product':
+                    products_list: Optional[Sequence[BaseProduct]] = None) -> 'Product':
         name = str(product_data['name'])
         description = str(product_data['description'])
         price = float(product_data['price'])
@@ -118,7 +121,7 @@ class Product(ReprMixin, BaseProduct):
                 if existing_product.name == name:
                     existing_product.quantity += quantity
                     existing_product.price = max(existing_product.price, price)
-                    return existing_product
+                    return cast(Product, existing_product)
 
         return cls(name, description, price, quantity)
 
@@ -180,7 +183,7 @@ class LawnGrass(Product):
 class Order(ReprMixin, BaseEntity):
     """Класс для представления заказа."""
 
-    def __init__(self, product: Product, quantity: int):
+    def __init__(self, product: Product, quantity: int) -> None:
         if not isinstance(product, Product):
             raise TypeError("Можно заказать только объекты классов Product или его наследников")
         if quantity <= 0:
