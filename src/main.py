@@ -35,6 +35,8 @@ class BaseProduct(ABC):
 
     @abstractmethod
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
+        if quantity <= 0:
+            raise ValueError("Товар с нулевым количеством не может быть добавлен")
         self.name = name
         self.description = description
         self.__price = price
@@ -224,7 +226,7 @@ class Category(ReprMixin, BaseEntity):
             raise TypeError("Можно добавлять только объекты классов Product или его наследников")
 
         if product.quantity <= 0:
-            raise ValueError("Количество товара должно быть положительным числом")
+            raise ValueError("Товар с нулевым количеством не может быть добавлен")
 
         for existing_product in self.__products:
             if existing_product.name == product.name:
@@ -331,6 +333,12 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 if __name__ == "__main__":
     print("=== Тестирование классов ===")
+
+    # Тестирование создания товара с нулевым количеством
+    try:
+        bad_product = Product("Неверный товар", "Описание", 100.0, 0)
+    except ValueError as e:
+        print(f"\nОжидаемая ошибка при создании товара: {e}")
 
     # Создаем тестовые продукты
     product1 = Product("Продукт1", "Описание продукта", 1200, 10)
