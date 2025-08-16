@@ -1,8 +1,10 @@
+from abc import ABC, abstractmethod
 import json
 from typing import Dict, List, Optional, Sequence, Union
 
 
-class Product:
+class BaseProduct(ABC):
+    @abstractmethod
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
         self.name = name
         self.description = description
@@ -10,8 +12,41 @@ class Product:
         self.quantity = quantity
 
     @property
+    @abstractmethod
     def price(self) -> float:
         return self.__price
+
+    @price.setter
+    @abstractmethod
+    def price(self, new_price: float) -> None:
+        pass
+
+    @abstractmethod
+    def __repr__(self) -> str:
+        pass
+
+    @abstractmethod
+    def __str__(self) -> str:
+        pass
+
+    @abstractmethod
+    def __add__(self, other: 'BaseProduct') -> float:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def new_product(cls, product_data: Dict[str, Union[str, float, int]],
+                   products_list: Optional[List['BaseProduct']] = None) -> 'BaseProduct':
+        pass
+
+
+class Product(BaseProduct):
+    def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
+        super().__init__(name, description, price, quantity)
+
+    @property
+    def price(self) -> float:
+        return self._BaseProduct__price
 
     @price.setter
     def price(self, new_price: float) -> None:
@@ -19,13 +54,13 @@ class Product:
             print("Цена не должна быть нулевая или отрицательная")
             return
 
-        if new_price < self.__price:
-            answer = input(f"Вы действительно хотите понизить цену с {self.__price} до {new_price}? (y/n): ")
+        if new_price < self._BaseProduct__price:
+            answer = input(f"Вы действительно хотите понизить цену с {self._BaseProduct__price} до {new_price}? (y/n): ")
             if answer.lower() != 'y':
                 print("Изменение цены отменено")
                 return
 
-        self.__price = new_price
+        self._BaseProduct__price = new_price
 
     def __repr__(self) -> str:
         return f"Product(name='{self.name}', price={self.price}, quantity={self.quantity})"
@@ -44,7 +79,7 @@ class Product:
 
     @classmethod
     def new_product(cls, product_data: Dict[str, Union[str, float, int]],
-                    products_list: Optional[List['Product']] = None) -> 'Product':
+                   products_list: Optional[List['Product']] = None) -> 'Product':
         name = str(product_data['name'])
         description = str(product_data['description'])
         price = float(product_data['price'])
@@ -139,28 +174,24 @@ class Category:
         self.description = description
         self.__products: List[Product] = []
 
-        # Добавляем продукты через метод add_product для валидации
         for product in products:
             self.add_product(product)
 
         Category.total_categories += 1
 
     def add_product(self, product: Product) -> None:
-        """Добавляет продукт в категорию с проверкой типа и количества."""
         if not isinstance(product, Product):
             raise TypeError("Можно добавлять только объекты классов Product или его наследников")
 
         if product.quantity <= 0:
             raise ValueError("Количество товара должно быть положительным числом")
 
-        # Объединяем с существующим продуктом, если есть
         for existing_product in self.__products:
             if existing_product.name == product.name:
                 existing_product.quantity += product.quantity
                 existing_product.price = max(existing_product.price, product.price)
                 return
 
-        # Добавляем новый продукт
         self.__products.append(product)
         Category.total_unique_products += 1
 
@@ -245,40 +276,33 @@ def load_data_from_json(filename: str) -> List[Category]:
 if __name__ == "__main__":
     print("=== Тестирование защиты добавления продуктов в категорию ===")
 
-    # Создаем тестовые продукты
     valid_product = Product("Валидный товар", "Описание", 100, 10)
     valid_smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
     valid_grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
 
-    # Создаем категорию
     category = Category("Тестовая категория", "Описание", [valid_product, valid_smartphone])
 
-    # Успешное добавление
     try:
         category.add_product(valid_grass)
         print("Успешно добавлен:", valid_grass)
     except (TypeError, ValueError) as e:
         print("Ошибка:", e)
 
-    # Попытка добавить неподходящий объект
     try:
         category.add_product("Это строка, а не продукт")  # type: ignore
     except (TypeError, ValueError) as e:
         print("Ожидаемая ошибка при добавлении строки:", e)
 
-    # Попытка добавить продукт с отрицательным количеством
     try:
         invalid_product = Product("Невалидный товар", "Описание", 100, -5)
         category.add_product(invalid_product)
     except (TypeError, ValueError) as e:
         print("Ожидаемая ошибка при отрицательном количестве:", e)
 
-    # Вывод содержимого категории
     print("\nСодержимое категории:")
     for product in category:
         print(product)
 
-    # Статистика
     print("\n=== Статистика ===")
     print(f"Всего категорий: {Category.total_categories}")
     print(f"Всего уникальных товаров: {Category.total_unique_products}")
