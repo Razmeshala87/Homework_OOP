@@ -237,6 +237,17 @@ class Category(ReprMixin, BaseEntity):
         self.__products.append(product)
         Category.total_unique_products += 1
 
+    def get_average_price(self) -> float:
+        """
+        Возвращает средний ценник всех товаров в категории.
+        Если в категории нет товаров, возвращает 0.
+        """
+        try:
+            total_price = sum(product.price for product in self.__products)
+            return total_price / len(self.__products)
+        except ZeroDivisionError:
+            return 0.0
+
     @property
     def products(self) -> str:
         return "\n".join(str(p) for p in self.__products)
@@ -366,6 +377,13 @@ if __name__ == "__main__":
     print("\nСодержимое категории:")
     for product in category:
         print(product)
+
+    # Тестируем метод get_average_price()
+    print("\nСредняя цена товаров в категории:", category.get_average_price())
+
+    # Создаем пустую категорию для теста
+    empty_category = Category("Пустая категория", "Нет товаров", [])
+    print("Средняя цена в пустой категории:", empty_category.get_average_price())
 
     # Статистика
     print("\n=== Статистика ===")
