@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 
 class Product:
@@ -37,7 +37,7 @@ class Product:
         if not isinstance(other, Product):
             raise TypeError("Можно складывать только объекты класса Product или его наследников")
 
-        if type(self) != type(other):
+        if type(self) is not type(other):
             raise TypeError("Нельзя складывать товары разных классов")
 
         return self.price * self.quantity + other.price * other.quantity
@@ -134,10 +134,10 @@ class Category:
     total_categories: int = 0
     total_unique_products: int = 0
 
-    def __init__(self, name: str, description: str, products: List[Product]) -> None:
+    def __init__(self, name: str, description: str, products: Sequence[Product]) -> None:
         self.name = name
         self.description = description
-        self.__products = []
+        self.__products: List[Product] = []
 
         # Добавляем продукты через метод add_product для валидации
         for product in products:
@@ -147,11 +147,8 @@ class Category:
 
     def add_product(self, product: Product) -> None:
         """Добавляет продукт в категорию с проверкой типа и количества."""
-        if not isinstance(product, (Product, Smartphone, LawnGrass)):
-            raise TypeError("Можно добавлять только объекты классов Product, Smartphone или LawnGrass")
-
-        if not issubclass(type(product), Product):
-            raise TypeError("Объект должен быть подклассом Product")
+        if not isinstance(product, Product):
+            raise TypeError("Можно добавлять только объекты классов Product или его наследников")
 
         if product.quantity <= 0:
             raise ValueError("Количество товара должно быть положительным числом")
@@ -201,8 +198,9 @@ def load_data_from_json(filename: str) -> List[Category]:
     all_products: List[Product] = []
 
     for category_data in data:
-        products = []
+        products: List[Product] = []
         for product_data in category_data['products']:
+            product: Product
             if 'efficiency' in product_data:
                 product = Smartphone(
                     name=str(product_data['name']),
@@ -212,8 +210,7 @@ def load_data_from_json(filename: str) -> List[Category]:
                     efficiency=str(product_data['efficiency']),
                     model=str(product_data['model']),
                     memory=str(product_data['memory']),
-                    color=str(product_data['color'])
-                )
+                    color=str(product_data['color']))
             elif 'country' in product_data:
                 product = LawnGrass(
                     name=str(product_data['name']),
@@ -222,8 +219,7 @@ def load_data_from_json(filename: str) -> List[Category]:
                     quantity=int(product_data['quantity']),
                     country=str(product_data['country']),
                     germination_period=str(product_data['germination_period']),
-                    color=str(product_data['color'])
-                )
+                    color=str(product_data['color']))
             else:
                 product = Product.new_product({
                     'name': str(product_data['name']),
@@ -266,7 +262,7 @@ if __name__ == "__main__":
 
     # Попытка добавить неподходящий объект
     try:
-        category.add_product("Это строка, а не продукт")
+        category.add_product("Это строка, а не продукт")  # type: ignore
     except (TypeError, ValueError) as e:
         print("Ожидаемая ошибка при добавлении строки:", e)
 
