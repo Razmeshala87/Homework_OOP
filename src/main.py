@@ -137,21 +137,33 @@ class Category:
     def __init__(self, name: str, description: str, products: List[Product]) -> None:
         self.name = name
         self.description = description
-        self.__products = products
+        self.__products = []
+
+        # Добавляем продукты через метод add_product для валидации
+        for product in products:
+            self.add_product(product)
 
         Category.total_categories += 1
-        Category.total_unique_products += len(products)
 
     def add_product(self, product: Product) -> None:
-        if not isinstance(product, Product):
-            raise TypeError("Можно добавлять только объекты класса Product или его наследников")
+        """Добавляет продукт в категорию с проверкой типа и количества."""
+        if not isinstance(product, (Product, Smartphone, LawnGrass)):
+            raise TypeError("Можно добавлять только объекты классов Product, Smartphone или LawnGrass")
 
+        if not issubclass(type(product), Product):
+            raise TypeError("Объект должен быть подклассом Product")
+
+        if product.quantity <= 0:
+            raise ValueError("Количество товара должно быть положительным числом")
+
+        # Объединяем с существующим продуктом, если есть
         for existing_product in self.__products:
             if existing_product.name == product.name:
                 existing_product.quantity += product.quantity
                 existing_product.price = max(existing_product.price, product.price)
                 return
 
+        # Добавляем новый продукт
         self.__products.append(product)
         Category.total_unique_products += 1
 
@@ -235,45 +247,38 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Тестирование сложения товаров
-    print("=== Тестирование сложения товаров ===")
+    print("=== Тестирование защиты добавления продуктов в категорию ===")
 
     # Создаем тестовые продукты
-    product1 = Product("Товар 1", "Описание 1", 100, 10)
-    product2 = Product("Товар 2", "Описание 2", 200, 5)
+    valid_product = Product("Валидный товар", "Описание", 100, 10)
+    valid_smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
+    valid_grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
 
-    smartphone1 = Smartphone("Смартфон 1", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
-    smartphone2 = Smartphone("Смартфон 2", "Описание", 60000, 2, "Высокая", "Модель Y", "256GB", "Белый")
+    # Создаем категорию
+    category = Category("Тестовая категория", "Описание", [valid_product, valid_smartphone])
 
-    grass1 = LawnGrass("Трава 1", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
-    grass2 = LawnGrass("Трава 2", "Описание", 1200, 15, "Германия", "10 дней", "Темно-зеленый")
-
-    # Успешные операции
+    # Успешное добавление
     try:
-        print("\nПравильные операции:")
-        print(f"Сумма Product1 + Product2: {product1 + product2} руб.")
-        print(f"Сумма Smartphone1 + Smartphone2: {smartphone1 + smartphone2} руб.")
-        print(f"Сумма Grass1 + Grass2: {grass1 + grass2} руб.")
-    except TypeError as e:
-        print(f"Ошибка: {e}")
+        category.add_product(valid_grass)
+        print("Успешно добавлен:", valid_grass)
+    except (TypeError, ValueError) as e:
+        print("Ошибка:", e)
 
-    # Неправильные операции
-    print("\nНеправильные операции:")
+    # Попытка добавить неподходящий объект
     try:
-        print("Попытка сложить Smartphone + Grass:", smartphone1 + grass1)
-    except TypeError as e:
-        print(f"Ожидаемая ошибка: {e}")
+        category.add_product("Это строка, а не продукт")
+    except (TypeError, ValueError) as e:
+        print("Ожидаемая ошибка при добавлении строки:", e)
 
+    # Попытка добавить продукт с отрицательным количеством
     try:
-        print("Попытка сложить Product + Smartphone:", product1 + smartphone1)
-    except TypeError as e:
-        print(f"Ожидаемая ошибка: {e}")
+        invalid_product = Product("Невалидный товар", "Описание", 100, -5)
+        category.add_product(invalid_product)
+    except (TypeError, ValueError) as e:
+        print("Ожидаемая ошибка при отрицательном количестве:", e)
 
-    # Тестирование категорий
-    print("\n=== Тестирование категорий ===")
-    category = Category("Тестовая категория", "Описание", [product1, product2, smartphone1, grass1])
-    print(category)
-    print("\nСписок товаров:")
+    # Вывод содержимого категории
+    print("\nСодержимое категории:")
     for product in category:
         print(product)
 
