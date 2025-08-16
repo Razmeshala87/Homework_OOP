@@ -35,7 +35,11 @@ class Product:
 
     def __add__(self, other: 'Product') -> float:
         if not isinstance(other, Product):
-            raise TypeError("Можно складывать только объекты класса Product")
+            raise TypeError("Можно складывать только объекты класса Product или его наследников")
+
+        if type(self) != type(other):
+            raise TypeError("Нельзя складывать товары разных классов")
+
         return self.price * self.quantity + other.price * other.quantity
 
     @classmethod
@@ -111,8 +115,6 @@ class LawnGrass(Product):
 
 
 class CategoryIterator:
-    """Итератор для перебора товаров категории."""
-
     def __init__(self, category: 'Category') -> None:
         self._category = category
         self._index = 0
@@ -189,8 +191,7 @@ def load_data_from_json(filename: str) -> List[Category]:
     for category_data in data:
         products = []
         for product_data in category_data['products']:
-            # Определяем тип продукта на основе наличия специфичных полей
-            if 'efficiency' in product_data:  # Это смартфон
+            if 'efficiency' in product_data:
                 product = Smartphone(
                     name=str(product_data['name']),
                     description=str(product_data['description']),
@@ -201,7 +202,7 @@ def load_data_from_json(filename: str) -> List[Category]:
                     memory=str(product_data['memory']),
                     color=str(product_data['color'])
                 )
-            elif 'country' in product_data:  # Это газонная трава
+            elif 'country' in product_data:
                 product = LawnGrass(
                     name=str(product_data['name']),
                     description=str(product_data['description']),
@@ -211,7 +212,7 @@ def load_data_from_json(filename: str) -> List[Category]:
                     germination_period=str(product_data['germination_period']),
                     color=str(product_data['color'])
                 )
-            else:  # Обычный продукт
+            else:
                 product = Product.new_product({
                     'name': str(product_data['name']),
                     'description': str(product_data['description']),
@@ -234,91 +235,52 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Тестирование новых классов
-    smartphone = Smartphone(
-        name="iPhone 15 Pro",
-        description="Флагманский смартфон",
-        price=150000.0,
-        quantity=10,
-        efficiency="Высокая",
-        model="15 Pro",
-        memory="256GB",
-        color="Титановый"
-    )
+    # Тестирование сложения товаров
+    print("=== Тестирование сложения товаров ===")
 
-    lawn_grass = LawnGrass(
-        name="Газонная трава Premium",
-        description="Мягкая газонная трава",
-        price=5000.0,
-        quantity=100,
-        country="Россия",
-        germination_period="14 дней",
-        color="Зеленый"
-    )
+    # Создаем тестовые продукты
+    product1 = Product("Товар 1", "Описание 1", 100, 10)
+    product2 = Product("Товар 2", "Описание 2", 200, 5)
 
-    # Создаем категорию и добавляем разные типы продуктов
-    mixed_category = Category(
-        name="Разные товары",
-        description="Смешанная категория",
-        products=[smartphone, lawn_grass]
-    )
+    smartphone1 = Smartphone("Смартфон 1", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
+    smartphone2 = Smartphone("Смартфон 2", "Описание", 60000, 2, "Высокая", "Модель Y", "256GB", "Белый")
 
-    # Добавляем обычный продукт
-    regular_product = Product("Обычный товар", "Описание", 1000.0, 5)
-    mixed_category.add_product(regular_product)
+    grass1 = LawnGrass("Трава 1", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
+    grass2 = LawnGrass("Трава 2", "Описание", 1200, 15, "Германия", "10 дней", "Темно-зеленый")
 
-    print("=== Тестирование новых классов ===")
-    print(smartphone)
-    print(lawn_grass)
-    print(regular_product)
+    # Успешные операции
+    try:
+        print("\nПравильные операции:")
+        print(f"Сумма Product1 + Product2: {product1 + product2} руб.")
+        print(f"Сумма Smartphone1 + Smartphone2: {smartphone1 + smartphone2} руб.")
+        print(f"Сумма Grass1 + Grass2: {grass1 + grass2} руб.")
+    except TypeError as e:
+        print(f"Ошибка: {e}")
 
-    print("\n=== Тестирование категории ===")
-    print(mixed_category)
-    print("\nСписок товаров в категории:")
-    for product in mixed_category:
+    # Неправильные операции
+    print("\nНеправильные операции:")
+    try:
+        print("Попытка сложить Smartphone + Grass:", smartphone1 + grass1)
+    except TypeError as e:
+        print(f"Ожидаемая ошибка: {e}")
+
+    try:
+        print("Попытка сложить Product + Smartphone:", product1 + smartphone1)
+    except TypeError as e:
+        print(f"Ожидаемая ошибка: {e}")
+
+    # Тестирование категорий
+    print("\n=== Тестирование категорий ===")
+    category = Category("Тестовая категория", "Описание", [product1, product2, smartphone1, grass1])
+    print(category)
+    print("\nСписок товаров:")
+    for product in category:
         print(product)
 
+    # Статистика
     print("\n=== Статистика ===")
     print(f"Всего категорий: {Category.total_categories}")
     print(f"Всего уникальных товаров: {Category.total_unique_products}")
-
-    # Тестирование загрузки из JSON (пример структуры в комментариях)
-    """
-    Пример структуры JSON-файла для тестирования:
-    [
-        {
-            "name": "Смартфоны",
-            "description": "Мобильные устройства",
-            "products": [
-                {
-                    "name": "iPhone 15",
-                    "description": "Новый iPhone",
-                    "price": 150000,
-                    "quantity": 10,
-                    "efficiency": "Высокая",
-                    "model": "15 Pro",
-                    "memory": "256GB",
-                    "color": "Титановый"
-                }
-            ]
-        },
-        {
-            "name": "Сад",
-            "description": "Товары для сада",
-            "products": [
-                {
-                    "name": "Газонная трава",
-                    "description": "Мягкая трава",
-                    "price": 5000,
-                    "quantity": 100,
-                    "country": "Россия",
-                    "germination_period": "14 дней",
-                    "color": "Зеленый"
-                }
-            ]
-        }
-    ]
-    """
 
 
 # if __name__ == "__main__":
