@@ -3,6 +3,15 @@ import json
 from typing import Dict, List, Optional, Sequence, Union
 
 
+class ReprMixin:
+    """Миксин для вывода информации о создании объекта."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        class_name = self.__class__.__name__
+        params = ', '.join([f"{k}={v!r}" for k, v in self.__dict__.items()])
+        print(f"Создан объект класса {class_name} с параметрами: {params}")
+
+
 class BaseProduct(ABC):
     @abstractmethod
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
@@ -40,9 +49,9 @@ class BaseProduct(ABC):
         pass
 
 
-class Product(BaseProduct):
+class Product(ReprMixin, BaseProduct):
     def __init__(self, name: str, description: str, price: float, quantity: int) -> None:
-        super().__init__(name, description, price, quantity)
+        super().__init__(name=name, description=description, price=price, quantity=quantity)
 
     @property
     def price(self) -> float:
@@ -274,17 +283,17 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    print("=== Тестирование защиты добавления продуктов в категорию ===")
+    print("=== Тестирование миксина ===")
+    product = Product("Продукт1", "Описание продукта", 1200, 10)
+    smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
+    grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
 
-    valid_product = Product("Валидный товар", "Описание", 100, 10)
-    valid_smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
-    valid_grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
-
-    category = Category("Тестовая категория", "Описание", [valid_product, valid_smartphone])
+    print("\n=== Тестирование защиты добавления продуктов в категорию ===")
+    category = Category("Тестовая категория", "Описание", [product, smartphone])
 
     try:
-        category.add_product(valid_grass)
-        print("Успешно добавлен:", valid_grass)
+        category.add_product(grass)
+        print("Успешно добавлен:", grass)
     except (TypeError, ValueError) as e:
         print("Ошибка:", e)
 
