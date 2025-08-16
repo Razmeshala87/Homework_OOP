@@ -28,10 +28,10 @@ class Product:
         self.__price = new_price
 
     def __repr__(self) -> str:
-        return f"Product(name='{self.name}', price={self.__price}, quantity={self.quantity})"
+        return f"Product(name='{self.name}', price={self.price}, quantity={self.quantity})"
 
     def __str__(self) -> str:
-        return f"{self.name}, {self.__price} руб. Остаток: {self.quantity} шт."
+        return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
 
     def __add__(self, other: 'Product') -> float:
         if not isinstance(other, Product):
@@ -54,6 +54,60 @@ class Product:
                     return existing_product
 
         return cls(name, description, price, quantity)
+
+
+class Smartphone(Product):
+    def __init__(
+            self,
+            name: str,
+            description: str,
+            price: float,
+            quantity: int,
+            efficiency: str,
+            model: str,
+            memory: str,
+            color: str
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.efficiency = efficiency
+        self.model = model
+        self.memory = memory
+        self.color = color
+
+    def __repr__(self) -> str:
+        return (f"Smartphone(name='{self.name}', price={self.price}, quantity={self.quantity}, "
+                f"efficiency='{self.efficiency}', model='{self.model}', "
+                f"memory='{self.memory}', color='{self.color}')")
+
+    def __str__(self) -> str:
+        return (f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт. "
+                f"(Модель: {self.model}, Память: {self.memory})")
+
+
+class LawnGrass(Product):
+    def __init__(
+            self,
+            name: str,
+            description: str,
+            price: float,
+            quantity: int,
+            country: str,
+            germination_period: str,
+            color: str
+    ) -> None:
+        super().__init__(name, description, price, quantity)
+        self.country = country
+        self.germination_period = germination_period
+        self.color = color
+
+    def __repr__(self) -> str:
+        return (f"LawnGrass(name='{self.name}', price={self.price}, quantity={self.quantity}, "
+                f"country='{self.country}', germination_period='{self.germination_period}', "
+                f"color='{self.color}')")
+
+    def __str__(self) -> str:
+        return (f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт. "
+                f"(Страна: {self.country}, Срок прорастания: {self.germination_period})")
 
 
 class CategoryIterator:
@@ -135,12 +189,36 @@ def load_data_from_json(filename: str) -> List[Category]:
     for category_data in data:
         products = []
         for product_data in category_data['products']:
-            product = Product.new_product({
-                'name': str(product_data['name']),
-                'description': str(product_data['description']),
-                'price': float(product_data['price']),
-                'quantity': int(product_data['quantity'])
-            }, all_products)
+            # Определяем тип продукта на основе наличия специфичных полей
+            if 'efficiency' in product_data:  # Это смартфон
+                product = Smartphone(
+                    name=str(product_data['name']),
+                    description=str(product_data['description']),
+                    price=float(product_data['price']),
+                    quantity=int(product_data['quantity']),
+                    efficiency=str(product_data['efficiency']),
+                    model=str(product_data['model']),
+                    memory=str(product_data['memory']),
+                    color=str(product_data['color'])
+                )
+            elif 'country' in product_data:  # Это газонная трава
+                product = LawnGrass(
+                    name=str(product_data['name']),
+                    description=str(product_data['description']),
+                    price=float(product_data['price']),
+                    quantity=int(product_data['quantity']),
+                    country=str(product_data['country']),
+                    germination_period=str(product_data['germination_period']),
+                    color=str(product_data['color'])
+                )
+            else:  # Обычный продукт
+                product = Product.new_product({
+                    'name': str(product_data['name']),
+                    'description': str(product_data['description']),
+                    'price': float(product_data['price']),
+                    'quantity': int(product_data['quantity'])
+                }, all_products)
+
             products.append(product)
             if product not in all_products:
                 all_products.append(product)
@@ -156,22 +234,92 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    # Создаем тестовые продукты
-    product1 = Product("Товар 1", "Описание 1", 100, 10)
-    product2 = Product("Товар 2", "Описание 2", 200, 5)
-    product3 = Product("Товар 3", "Описание 3", 300, 3)
+    # Тестирование новых классов
+    smartphone = Smartphone(
+        name="iPhone 15 Pro",
+        description="Флагманский смартфон",
+        price=150000.0,
+        quantity=10,
+        efficiency="Высокая",
+        model="15 Pro",
+        memory="256GB",
+        color="Титановый"
+    )
 
-    # Создаем категорию и добавляем продукты
-    category = Category("Тестовая категория", "Описание категории", [product1, product2, product3])
+    lawn_grass = LawnGrass(
+        name="Газонная трава Premium",
+        description="Мягкая газонная трава",
+        price=5000.0,
+        quantity=100,
+        country="Россия",
+        germination_period="14 дней",
+        color="Зеленый"
+    )
 
-    # Демонстрация итерации по товарам категории
-    print("Товары в категории:")
-    for product in category:
+    # Создаем категорию и добавляем разные типы продуктов
+    mixed_category = Category(
+        name="Разные товары",
+        description="Смешанная категория",
+        products=[smartphone, lawn_grass]
+    )
+
+    # Добавляем обычный продукт
+    regular_product = Product("Обычный товар", "Описание", 1000.0, 5)
+    mixed_category.add_product(regular_product)
+
+    print("=== Тестирование новых классов ===")
+    print(smartphone)
+    print(lawn_grass)
+    print(regular_product)
+
+    print("\n=== Тестирование категории ===")
+    print(mixed_category)
+    print("\nСписок товаров в категории:")
+    for product in mixed_category:
         print(product)
 
-    # Альтернативный вариант с использованием list()
-    print("\nСписок товаров (через list()):")
-    print(list(category))
+    print("\n=== Статистика ===")
+    print(f"Всего категорий: {Category.total_categories}")
+    print(f"Всего уникальных товаров: {Category.total_unique_products}")
+
+    # Тестирование загрузки из JSON (пример структуры в комментариях)
+    """
+    Пример структуры JSON-файла для тестирования:
+    [
+        {
+            "name": "Смартфоны",
+            "description": "Мобильные устройства",
+            "products": [
+                {
+                    "name": "iPhone 15",
+                    "description": "Новый iPhone",
+                    "price": 150000,
+                    "quantity": 10,
+                    "efficiency": "Высокая",
+                    "model": "15 Pro",
+                    "memory": "256GB",
+                    "color": "Титановый"
+                }
+            ]
+        },
+        {
+            "name": "Сад",
+            "description": "Товары для сада",
+            "products": [
+                {
+                    "name": "Газонная трава",
+                    "description": "Мягкая трава",
+                    "price": 5000,
+                    "quantity": 100,
+                    "country": "Россия",
+                    "germination_period": "14 дней",
+                    "color": "Зеленый"
+                }
+            ]
+        }
+    ]
+    """
+
 
 # if __name__ == "__main__":
 #     product1 = Product("Samsung Galaxy S23 Ultra", "256GB, Серый цвет, 200MP камера", 180000.0, 5)
