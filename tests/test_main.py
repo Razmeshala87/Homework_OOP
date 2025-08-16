@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import pytest
 
-from src.main import Category, LawnGrass, Order, Product, Smartphone, load_data_from_json
+from src.main import Category, LawnGrass, Order, Product, Smartphone, load_data_from_json, ZeroQuantityError
 
 
 @pytest.fixture
@@ -204,7 +204,7 @@ def test_add_product_invalid_type(sample_category: Category) -> None:
 
 def test_add_product_negative_quantity(sample_category: Category) -> None:
     """Тестирование попытки добавления продукта с отрицательным количеством."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ZeroQuantityError):
         sample_category.add_product(Product("Товар", "Описание", 100.0, -5))
 
 
@@ -270,8 +270,8 @@ def test_product_addition_valid(sample_product: Product) -> None:
     product2 = Product("Тестовый товар 2", "Описание", 500.0, 2)
     total = sample_product + product2
     expected = (
-        sample_product.price * sample_product.quantity +
-        product2.price * product2.quantity
+            sample_product.price * sample_product.quantity +
+            product2.price * product2.quantity
     )
     assert total == expected
 
@@ -338,7 +338,7 @@ def test_order_creation_invalid_type() -> None:
 
 def test_order_creation_invalid_quantity(sample_product: Product) -> None:
     """Тестирование попытки создания заказа с неверным количеством."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ZeroQuantityError):
         Order(sample_product, -1)
     with pytest.raises(ValueError):
         Order(sample_product, sample_product.quantity + 1)
@@ -361,3 +361,58 @@ def test_category_products_property(sample_category: Category, sample_product: P
     """Тестирование свойства products."""
     sample_category.add_product(sample_product)
     assert sample_category.products == str(sample_product)
+
+
+def test_get_average_price_empty_category(sample_category: Category) -> None:
+    """Тестирование расчета средней цены для пустой категории."""
+    assert sample_category.get_average_price() == 0.0
+
+
+def test_product_addition_different_classes(sample_product: Product, sample_smartphone: Smartphone) -> None:
+    """Тестирование попытки сложения продуктов разных классов."""
+    with pytest.raises(TypeError, match="Нельзя складывать товары разных классов"):
+        sample_product + sample_smartphone
+
+
+def test_product_creation_zero_quantity() -> None:
+    """Тестирование создания продукта с нулевым количеством."""
+    with pytest.raises(ZeroQuantityError):
+        Product("Нулевой товар", "Описание", 100.0, 0)
+
+
+def test_category_and_product_counters(sample_category: Category, sample_product: Product) -> None:
+    """Тестирование счетчиков категорий и уникальных товаров."""
+    initial_categories = Category.total_categories
+    initial_products = Category.total_unique_products
+
+    # Создаем новую категорию
+    new_category = Category("Новая категория", "Описание", [sample_product])
+
+    assert Category.total_categories == initial_categories + 1
+    assert Category.total_unique_products == initial_products + 1
+
+    # Добавляем тот же продукт в новую категорию - счетчик уникальных продуктов не должен измениться
+    new_category.add_product(sample_product)
+    assert Category.total_unique_products == initial_products + 1
+
+
+def test_order_creation_reduces_product_quantity(sample_product: Product) -> None:
+    """Тестирование уменьшения количества товара при создании заказа."""
+    initial_quantity = sample_product.quantity
+    order_quantity = 2
+
+    order = Order(sample_product, order_quantity)
+
+    assert sample_product.quantity == initial_quantity - order_quantity
+    assert order.total_price == sample_product.price * order_quantity
+
+
+def test_load_data_from_json_missing_fields(tmp_path: Path) -> None:
+    """Тестирование загрузки данных из JSON с отсутствующими обязательными полями."""
+    file_path = tmp_path / "missing_fields.json"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump([{"name": "Категория без продуктов", "description": "Описание", "products": []}], f)
+
+    categories = load_data_from_json(str(file_path))
+    assert len(categories) == 1
+    assert len(categories[0].products_list) == 0
