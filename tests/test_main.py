@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import pytest
 
-from src.main import Category, Product, Smartphone, LawnGrass, load_data_from_json
+from src.main import Category, LawnGrass, Product, Smartphone, load_data_from_json
 
 
 @pytest.fixture
@@ -17,15 +17,30 @@ def sample_product() -> Product:
 @pytest.fixture
 def sample_smartphone() -> Smartphone:
     """Фикстура для создания тестового смартфона."""
-    return Smartphone("Тестовый смартфон", "Описание", 50000.0, 3,
-                     "Высокая", "Модель X", "128GB", "Черный")
+    return Smartphone(
+        "Тестовый смартфон",
+        "Описание",
+        50000.0,
+        3,
+        "Высокая",
+        "Модель X",
+        "128GB",
+        "Черный"
+    )
 
 
 @pytest.fixture
 def sample_lawn_grass() -> LawnGrass:
     """Фикстура для создания тестовой газонной травы."""
-    return LawnGrass("Тестовая трава", "Описание", 1000.0, 20,
-                    "Россия", "14 дней", "Зеленый")
+    return LawnGrass(
+        "Тестовая трава",
+        "Описание",
+        1000.0,
+        20,
+        "Россия",
+        "14 дней",
+        "Зеленый"
+    )
 
 
 @pytest.fixture
@@ -184,7 +199,7 @@ def test_add_product_valid(sample_category: Category, sample_product: Product) -
 def test_add_product_invalid_type(sample_category: Category) -> None:
     """Тестирование попытки добавления невалидного типа."""
     with pytest.raises(TypeError):
-        sample_category.add_product("invalid product")
+        sample_category.add_product("это строка, а не продукт")  # type: ignore[arg-type]
 
 
 def test_add_product_negative_quantity(sample_category: Category) -> None:
