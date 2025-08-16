@@ -5,11 +5,29 @@ from typing import Dict, List, Optional, Sequence, Union
 
 class ReprMixin:
     """Миксин для вывода информации о создании объекта."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         class_name = self.__class__.__name__
         params = ', '.join([f"{k}={v!r}" for k, v in self.__dict__.items()])
         print(f"Создан объект класса {class_name} с параметрами: {params}")
+
+
+class BaseEntity(ABC):
+    """Абстрактный базовый класс для сущностей с общей функциональностью."""
+
+    @abstractmethod
+    def __init__(self, name: str, description: str):
+        self.name = name
+        self.description = description
+
+    @abstractmethod
+    def __repr__(self) -> str:
+        pass
+
+    @abstractmethod
+    def __str__(self) -> str:
+        pass
 
 
 class BaseProduct(ABC):
@@ -45,7 +63,7 @@ class BaseProduct(ABC):
     @classmethod
     @abstractmethod
     def new_product(cls, product_data: Dict[str, Union[str, float, int]],
-                   products_list: Optional[List['BaseProduct']] = None) -> 'BaseProduct':
+                    products_list: Optional[List['BaseProduct']] = None) -> 'BaseProduct':
         pass
 
 
@@ -64,7 +82,8 @@ class Product(ReprMixin, BaseProduct):
             return
 
         if new_price < self._BaseProduct__price:
-            answer = input(f"Вы действительно хотите понизить цену с {self._BaseProduct__price} до {new_price}? (y/n): ")
+            answer = input(
+                f"Вы действительно хотите понизить цену с {self._BaseProduct__price} до {new_price}? (y/n): ")
             if answer.lower() != 'y':
                 print("Изменение цены отменено")
                 return
@@ -88,7 +107,7 @@ class Product(ReprMixin, BaseProduct):
 
     @classmethod
     def new_product(cls, product_data: Dict[str, Union[str, float, int]],
-                   products_list: Optional[List['Product']] = None) -> 'Product':
+                    products_list: Optional[List['Product']] = None) -> 'Product':
         name = str(product_data['name'])
         description = str(product_data['description'])
         price = float(product_data['price'])
@@ -158,29 +177,38 @@ class LawnGrass(Product):
                 f"(Страна: {self.country}, Срок прорастания: {self.germination_period})")
 
 
-class CategoryIterator:
-    def __init__(self, category: 'Category') -> None:
-        self._category = category
-        self._index = 0
+class Order(ReprMixin, BaseEntity):
+    """Класс для представления заказа."""
 
-    def __iter__(self) -> 'CategoryIterator':
-        return self
+    def __init__(self, product: Product, quantity: int):
+        if not isinstance(product, Product):
+            raise TypeError("Можно заказать только объекты классов Product или его наследников")
+        if quantity <= 0:
+            raise ValueError("Количество товара должно быть положительным числом")
+        if quantity > product.quantity:
+            raise ValueError("Недостаточно товара на складе")
 
-    def __next__(self) -> Product:
-        if self._index < len(self._category.products_list):
-            product = self._category.products_list[self._index]
-            self._index += 1
-            return product
-        raise StopIteration
+        super().__init__(name=f"Заказ {product.name}", description=f"Заказ товара {product.name}")
+        self.product = product
+        self.quantity = quantity
+        self.total_price = product.price * quantity
+        product.quantity -= quantity  # Уменьшаем количество товара на складе
+
+    def __repr__(self) -> str:
+        return f"Order(product={self.product!r}, quantity={self.quantity}, total_price={self.total_price})"
+
+    def __str__(self) -> str:
+        return (f"Заказ: {self.product.name}, Количество: {self.quantity} шт., "
+                f"Итого: {self.total_price} руб.")
 
 
-class Category:
+class Category(ReprMixin, BaseEntity):
+    """Класс для представления категории товаров."""
     total_categories: int = 0
     total_unique_products: int = 0
 
     def __init__(self, name: str, description: str, products: Sequence[Product]) -> None:
-        self.name = name
-        self.description = description
+        super().__init__(name, description)
         self.__products: List[Product] = []
 
         for product in products:
@@ -212,7 +240,7 @@ class Category:
     def products_list(self) -> List[Product]:
         return self.__products
 
-    def __iter__(self) -> CategoryIterator:
+    def __iter__(self) -> 'CategoryIterator':
         return CategoryIterator(self)
 
     def __repr__(self) -> str:
@@ -221,6 +249,22 @@ class Category:
     def __str__(self) -> str:
         total_quantity = sum(p.quantity for p in self.__products)
         return f"{self.name}, количество продуктов: {total_quantity} шт."
+
+
+class CategoryIterator:
+    def __init__(self, category: Category) -> None:
+        self._category = category
+        self._index = 0
+
+    def __iter__(self) -> 'CategoryIterator':
+        return self
+
+    def __next__(self) -> Product:
+        if self._index < len(self._category.products_list):
+            product = self._category.products_list[self._index]
+            self._index += 1
+            return product
+        raise StopIteration
 
 
 def load_data_from_json(filename: str) -> List[Category]:
@@ -283,35 +327,36 @@ def load_data_from_json(filename: str) -> List[Category]:
 
 
 if __name__ == "__main__":
-    print("=== Тестирование миксина ===")
-    product = Product("Продукт1", "Описание продукта", 1200, 10)
+    print("=== Тестирование классов ===")
+
+    # Создаем тестовые продукты
+    product1 = Product("Продукт1", "Описание продукта", 1200, 10)
     smartphone = Smartphone("Смартфон", "Описание", 50000, 3, "Высокая", "Модель X", "128GB", "Черный")
     grass = LawnGrass("Трава", "Описание", 1000, 20, "Россия", "14 дней", "Зеленый")
 
-    print("\n=== Тестирование защиты добавления продуктов в категорию ===")
-    category = Category("Тестовая категория", "Описание", [product, smartphone])
+    # Создаем категорию
+    category = Category("Тестовая категория", "Описание", [product1, smartphone])
+
+    # Тестируем заказ
+    try:
+        order1 = Order(product1, 2)
+        print("\nУспешный заказ:")
+        print(order1)
+        print(f"Остаток товара: {product1.quantity}")
+    except (TypeError, ValueError) as e:
+        print(f"Ошибка при создании заказа: {e}")
 
     try:
-        category.add_product(grass)
-        print("Успешно добавлен:", grass)
-    except (TypeError, ValueError) as e:
-        print("Ошибка:", e)
+        order2 = Order(smartphone, 5)  # Пытаемся заказать больше, чем есть
+    except ValueError as e:
+        print(f"\nОжидаемая ошибка: {e}")
 
-    try:
-        category.add_product("Это строка, а не продукт")  # type: ignore
-    except (TypeError, ValueError) as e:
-        print("Ожидаемая ошибка при добавлении строки:", e)
-
-    try:
-        invalid_product = Product("Невалидный товар", "Описание", 100, -5)
-        category.add_product(invalid_product)
-    except (TypeError, ValueError) as e:
-        print("Ожидаемая ошибка при отрицательном количестве:", e)
-
+    # Выводим информацию о категории
     print("\nСодержимое категории:")
     for product in category:
         print(product)
 
+    # Статистика
     print("\n=== Статистика ===")
     print(f"Всего категорий: {Category.total_categories}")
     print(f"Всего уникальных товаров: {Category.total_unique_products}")
